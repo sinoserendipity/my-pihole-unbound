@@ -3,6 +3,7 @@ set -eu
 
 UNBOUND_CONFIG="${UNBOUND_CONFIG:-/etc/unbound/unbound.conf}"
 UNBOUND_ROOT_KEY="${UNBOUND_ROOT_KEY:-/var/lib/unbound/root.key}"
+UNBOUND_BOOTSTRAP_ROOT_KEY="${UNBOUND_BOOTSTRAP_ROOT_KEY:-/usr/share/dnssec-root/trusted-key.key}"
 SENTINEL_INTERVAL="${SENTINEL_INTERVAL:-5}"
 
 log() {
@@ -17,12 +18,22 @@ refresh_root_anchor() {
   log "Refreshing DNSSEC root trust anchor with unbound-anchor"
   install -d -m 0755 -o unbound -g unbound "$(dirname "$UNBOUND_ROOT_KEY")"
 
+  if [ ! -s "$UNBOUND_ROOT_KEY" ] && [ -s "$UNBOUND_BOOTSTRAP_ROOT_KEY" ]; then
+    log "Bootstrapping DNSSEC root trust anchor from ${UNBOUND_BOOTSTRAP_ROOT_KEY}"
+    cp "$UNBOUND_BOOTSTRAP_ROOT_KEY" "$UNBOUND_ROOT_KEY"
+  fi
+
   if unbound-anchor -a "$UNBOUND_ROOT_KEY"; then
     chown unbound:unbound "$UNBOUND_ROOT_KEY" 2>/dev/null || true
     chmod 0644 "$UNBOUND_ROOT_KEY" 2>/dev/null || true
     log "DNSSEC root trust anchor is ready"
   else
     log "WARNING: unbound-anchor failed; continuing with existing trust anchor if present"
+  fi
+
+  if [ ! -s "$UNBOUND_ROOT_KEY" ]; then
+    log "ERROR: DNSSEC root trust anchor is missing"
+    return 1
   fi
 }
 

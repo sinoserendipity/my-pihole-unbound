@@ -12,6 +12,8 @@ LABEL org.opencontainers.image.base.name="pihole/pihole:${PIHOLE_VERSION}"
 
 RUN apk add --no-cache \
       ca-certificates \
+      dns-root-hints \
+      dnssec-root \
       unbound \
     && install -d -m 0755 /etc/unbound/unbound.conf.d /var/lib/unbound /var/log/unbound \
     && chown -R unbound:unbound /var/lib/unbound /var/log/unbound

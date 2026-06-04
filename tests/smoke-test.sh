@@ -33,13 +33,30 @@ wait_for_container() {
 }
 
 assert_dnssec_resolution() {
-  local output
-  output="$(docker exec "${NAME}" dig +dnssec +multi @127.0.0.1 cloudflare.com A)"
-  printf '%s\n' "${output}"
+  local elapsed=0
+  local output=""
 
-  grep -q "status: NOERROR" <<<"${output}"
-  grep -q "flags:.* ad[ ;]" <<<"${output}"
-  grep -q "RRSIG" <<<"${output}"
+  until output="$(docker exec "${NAME}" dig +dnssec +adflag +multi @127.0.0.1 dnssec.works A)" \
+    && grep -q "status: NOERROR" <<<"${output}" \
+    && grep -q "flags:.* ad[ ;]" <<<"${output}" \
+    && grep -q "RRSIG" <<<"${output}"; do
+    if (( elapsed >= TIMEOUT_SECONDS )); then
+      log "DNSSEC resolution did not validate within ${TIMEOUT_SECONDS}s"
+      printf '%s\n' "${output}"
+      log "Direct Unbound diagnostic"
+      docker exec "${NAME}" dig +dnssec +adflag +multi @127.0.0.1 -p 5335 dnssec.works A || true
+      log "Expected DNSSEC failure diagnostic"
+      docker exec "${NAME}" dig +dnssec +multi @127.0.0.1 -p 5335 fail01.dnssec.works A || true
+      log "Recent container logs"
+      docker logs --tail 200 "${NAME}" || true
+      return 1
+    fi
+
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+
+  printf '%s\n' "${output}"
 }
 
 cleanup

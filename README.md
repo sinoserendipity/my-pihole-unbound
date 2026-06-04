@@ -16,6 +16,7 @@ pihole/pihole:2026.05.0
 - 自定义入口脚本启动 Unbound 后运行后台 Sentinel Loop，每 5 秒检测一次，异常退出会自动拉起。
 - 入口脚本最后使用 `exec start.sh` 将 PID 1 交给官方 Pi-hole 启动脚本，保留官方信号处理、日志与停机行为。
 - 默认启用 DNSSEC、缓存预取、QNAME minimisation，并将 EDNS UDP 报文限制为 `1232` 字节。
+- 显式安装 Alpine 的 `dns-root-hints` 与 `dnssec-root`，确保递归根提示和 DNSSEC 初始信任锚在离线/受限启动场景下也可用。
 - 提供 Docker Compose、冒烟测试脚本、GitHub Actions 多架构 GHCR 发布、Cosign 签名和 GitHub Release 自动化。
 
 ## 架构
@@ -93,6 +94,9 @@ Unbound 默认配置位于 [docker/unbound/unbound.conf](./docker/unbound/unboun
 ```text
 interface: 127.0.0.1
 port: 5335
+do-ip4: yes
+do-ip6: no
+root-hints: "/usr/share/dns-root-hints/named.root"
 harden-dnssec-stripped: yes
 prefetch: yes
 prefetch-key: yes
@@ -108,6 +112,8 @@ edns-packet-max=1232
 ```
 
 `1232` 字节通常可减少 UDP DNS 响应在 IPv6/现代网络路径中的分片概率，从而降低解析失败风险。
+
+默认配置将 `do-ip6` 设为 `no`，这是为了兼容 CI、NAS、家庭路由器等常见 Docker 环境中没有原生 IPv6 出口的情况。如果你的宿主机具备稳定原生 IPv6，可以通过挂载自定义配置开启 IPv6。
 
 默认 Compose 示例不挂载 `/etc/dnsmasq.d`，这样镜像内置的 `99-edns.conf` 不会被空目录遮盖。如果确实需要挂载该目录，请确保宿主机目录里也包含同等配置。
 
