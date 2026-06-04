@@ -1,0 +1,15 @@
+#!/command/with-contenv sh
+set -eu
+
+attempt=0
+while ! pgrep -x unbound >/dev/null 2>&1; do
+  attempt=$((attempt + 1))
+  if [ "$attempt" -ge 30 ]; then
+    printf '%s %s\n' "[pihole-unbound:pihole]" "Unbound did not appear within 30s; starting Pi-hole anyway"
+    break
+  fi
+  sleep 1
+done
+
+printf '%s %s\n' "[pihole-unbound:pihole]" "Starting official Pi-hole start.sh under s6 supervision"
+exec start.sh

@@ -8,3 +8,4 @@ Dockerfile text eol=lf
 *.md text eol=lf
 *.dockerignore text eol=lf
 *.gitignore text eol=lf
+docker/root/** text eol=lf

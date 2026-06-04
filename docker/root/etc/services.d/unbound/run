@@ -1,0 +1,10 @@
+#!/command/with-contenv sh
+set -eu
+
+UNBOUND_CONFIG="${UNBOUND_CONFIG:-/etc/unbound/unbound.conf}"
+
+printf '%s %s\n' "[pihole-unbound:unbound]" "Validating Unbound configuration"
+unbound-checkconf "$UNBOUND_CONFIG"
+
+printf '%s %s\n' "[pihole-unbound:unbound]" "Starting Unbound recursive resolver on 127.0.0.1:5335"
+exec unbound -d -c "$UNBOUND_CONFIG"
