@@ -1,0 +1,105 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "docker/**"
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract Pi-hole version
+        id: version
+        run: |
+          version="$(awk -F= '/^ARG PIHOLE_VERSION=/{print $2; exit}' docker/Dockerfile)"
+          test -n "${version}"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set lowercase image name
+        id: image
+        run: |
+          image="${REGISTRY}/${IMAGE_NAME}"
+          echo "name=${image,,}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image.outputs.name }}
+          tags: |
+            type=raw,value=${{ steps.version.outputs.version }}
+            type=raw,value=latest
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.base.name=pihole/pihole:${{ steps.version.outputs.version }}
+
+      - name: Build and push multi-arch image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image recursively
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          IMAGE_REF: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+        run: cosign sign --yes --recursive "${IMAGE_REF}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Pi-hole Unbound ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          body: |
+            ## Image
+
+            This release is based on `pihole/pihole:${{ steps.version.outputs.version }}` and is published only to GHCR.
+
+            ```bash
+            docker pull ${{ steps.image.outputs.name }}:${{ steps.version.outputs.version }}
+            docker pull ${{ steps.image.outputs.name }}:latest
+            ```
+
+            ## Verification
+
+            The multi-architecture image was built with Buildx for `linux/amd64`, `linux/arm64`, and `linux/arm/v7`, then signed with Sigstore Cosign.
