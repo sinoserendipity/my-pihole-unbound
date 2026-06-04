@@ -54,6 +54,8 @@ services:
       - "443:443/tcp"
     environment:
       TZ: "America/New_York"
+      UNBOUND_SENTINEL_ENABLED: "true"
+      SENTINEL_INTERVAL: "5"
       FTLCONF_dns_upstreams: "127.0.0.1#5335"
       FTLCONF_webserver_api_password: "change-this-password"
       FTLCONF_dns_dnssec: "true"
@@ -79,6 +81,20 @@ http://<host-ip>/admin/
 ```
 
 注意：本项目面向 Pi-hole v6+，请使用 `FTLCONF_` 前缀配置。不要再使用 v5 时代的 `WEBPASSWORD`、`PIHOLE_DNS_` 等变量。
+
+如需关闭 Unbound Sentinel 守护循环，可设置：
+
+```yaml
+environment:
+  UNBOUND_SENTINEL_ENABLED: "false"
+```
+
+如需保留 Sentinel 但降低检查频率，可调整：
+
+```yaml
+environment:
+  SENTINEL_INTERVAL: "15"
+```
 
 ## DNS 配置
 

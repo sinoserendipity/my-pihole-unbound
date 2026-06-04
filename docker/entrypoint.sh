@@ -4,6 +4,7 @@ set -eu
 UNBOUND_CONFIG="${UNBOUND_CONFIG:-/etc/unbound/unbound.conf}"
 UNBOUND_ROOT_KEY="${UNBOUND_ROOT_KEY:-/var/lib/unbound/root.key}"
 UNBOUND_BOOTSTRAP_ROOT_KEY="${UNBOUND_BOOTSTRAP_ROOT_KEY:-/usr/share/dnssec-root/trusted-key.key}"
+UNBOUND_SENTINEL_ENABLED="${UNBOUND_SENTINEL_ENABLED:-true}"
 SENTINEL_INTERVAL="${SENTINEL_INTERVAL:-5}"
 
 log() {
@@ -62,7 +63,15 @@ sentinel_loop() {
 
 refresh_root_anchor
 start_unbound
-sentinel_loop &
+
+case "$UNBOUND_SENTINEL_ENABLED" in
+  true|TRUE|1|yes|YES|on|ON)
+    sentinel_loop &
+    ;;
+  *)
+    log "Sentinel monitor disabled by UNBOUND_SENTINEL_ENABLED=${UNBOUND_SENTINEL_ENABLED}"
+    ;;
+esac
 
 log "Handing PID 1 to official Pi-hole start.sh"
 exec start.sh "$@"

@@ -11,6 +11,8 @@ services:
       - "443:443/tcp"
     environment:
       TZ: "America/New_York"
+      UNBOUND_SENTINEL_ENABLED: "true"
+      SENTINEL_INTERVAL: "5"
       FTLCONF_dns_upstreams: "127.0.0.1#5335"
       FTLCONF_webserver_api_password: "change-this-password"
       FTLCONF_dns_dnssec: "true"
