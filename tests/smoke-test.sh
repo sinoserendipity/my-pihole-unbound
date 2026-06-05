@@ -22,7 +22,7 @@ cleanup() {
 }
 
 log() {
-  printf "${BLUE}[smoke]${NC} %s\n" "$*"
+  echo -e "${BLUE}[smoke]${NC} $*"
 }
 
 log_pass() {
