@@ -42,28 +42,56 @@ s6-overlay 作为 PID 1 负责信号处理、子进程回收和 longrun 服务�
 
 ```yaml
 services:
-  pihole:
-    image: ghcr.io/username/my-pihole-unbound:latest
-    container_name: pihole-unbound
-    hostname: pihole
-    restart: unless-stopped
-    ports:
-      - "53:53/tcp"
-      - "53:53/udp"
-      - "80:80/tcp"
-      - "443:443/tcp"
+  pihole-unbound:
+    container_name: mypihole
+    image: ghcr.io/sinoserendipity/my-pihole-unbound:latest
+    hostname: ${HOSTNAME}
+    domainname: ${DOMAIN_NAME}
+    
+    networks:
+      br0:
+        ipv4_address: 192.168.1.250
+                 
     environment:
-      TZ: "America/New_York"
-      FTLCONF_dns_upstreams: "127.0.0.1#5335"
-      FTLCONF_webserver_api_password: "change-this-password"
-      FTLCONF_dns_dnssec: "true"
-      FTLCONF_dns_listeningMode: "all"
+      - TZ=${TZ:-UTC}
+      - FTLCONF_webserver_api_password=${WEBPASSWORD}
+      - FTLCONF_webserver_interface_theme=${WEBTHEME}
+      - FTLCONF_dns_revServers=${REV_SERVER:-false},${REV_SERVER_CIDR},${REV_SERVER_TARGET},${REV_SERVER_DOMAIN}
+      - FTLCONF_dns_upstreams=127.0.0.1#5335
+      - FTLCONF_dns_dnssec=true
+      - FTLCONF_dns_listeningMode=all
+      - FTLCONF_webserver_port=${PIHOLE_WEBPORT}
     volumes:
-      - ./data/etc-pihole:/etc/pihole
-      - ./data/unbound:/etc/unbound/unbound.conf.d:ro
-    cap_add:
-      - NET_ADMIN
+      - mypihole-unbound:/etc/pihole:rw
+      - mypihole_dnsmasq-unbound:/etc/unbound/unbound.conf.d:rw
+    restart: unless-stopped
+
+volumes:
+  mypihole-unbound:
+  mypihole_dnsmasq-unbound:
+
+networks:
+  br0:
+    external: true
 ```
+
+env:
+
+```env
+TZ=America/New_York
+WEBPASSWORD=contact
+REV_SERVER=true
+REV_SERVER_DOMAIN=local
+REV_SERVER_TARGET=192.168.1.1
+REV_SERVER_CIDR=192.168.0.0/16
+HOSTNAME=mypihole
+DOMAIN_NAME=mypihole.local
+PIHOLE_WEBPORT=80
+WEBTHEME=default-dark
+
+```
+
+
 
 启动：
 
