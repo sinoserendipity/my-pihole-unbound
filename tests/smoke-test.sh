@@ -107,6 +107,9 @@ assert_dnssec_resolution() {
   done
   
   printf "\n"
+  printf "${BOLD}${BLUE}--- DNSSEC 响应详情 ---${NC}\n"
+  printf '%s\n' "${output}"
+  printf "${BOLD}${BLUE}-----------------------${NC}\n"
   log_pass "DNSSEC 验证通过 (Authenticated Data 已确认)"
 }
 
