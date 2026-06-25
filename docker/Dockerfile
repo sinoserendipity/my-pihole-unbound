@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG PIHOLE_VERSION=2026.05.0
+ARG PIHOLE_VERSION=2026.06.0
 FROM pihole/pihole:${PIHOLE_VERSION}
 
 ARG PIHOLE_VERSION
